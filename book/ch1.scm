@@ -117,44 +117,92 @@
 
 
 ;;EXERCISE 1.1
+
+;; Below is a sequence of expressions. What is the result printed by the
+;; interpreter in response to each expression? Assume that the sequence is to be
+;; evaluated in the order in which it is presented.
+
 ;: 10
+;; 10
 
 ;: (+ 5 3 4)
+;; 12
 
 ;: (- 9 1)
+;; 8
 
 ;: (/ 6 2)
+;; 3
 
 ;: (+ (* 2 4) (- 4 6))
+;; 6
 
 ;: (define a 3)
+;; a
 
 ;: (define b (+ a 1))
+;; b
 
 ;: (+ a b (* a b))
+;; 19
 
 ;: (= a b)
+;; #f
 
 ;: (if (and (> b a) (< b (* a b)))
 ;:     b
 ;:     a)
+;; 4
 
 ;: (cond ((= a 4) 6)
 ;:       ((= b 4) (+ 6 7 a))
 ;:       (else 25))
+;; 16
 
 ;: (+ 2 (if (> b a) b a))
+;; 6
 
 ;: (* (cond ((> a b) a)
 ;: 	 ((< a b) b)
 ;: 	 (else -1))
 ;:    (+ a 1))
+;; 16
+
+;;EXERCISE 1.2
+
+;; Translate the following expression into prefix form.
+
+(/ (+ 5 4 (- 2 (- 3 (+ 6 (/ 4 5)))))
+   (* 3 (- 6 2) (- 2 7)))
+
+;;EXERCISE 1.3
+
+;; Define a procedure that takes three numbers as arguments and returns the sum
+;; of the squares of the two larger numbers.
+
+(define (sum-of-larger-squares a b c)
+  (cond ((and (>= a c) (>= b c)) (sum-of-squares a b))
+        ((and (>= a b) (>= c b)) (sum-of-squares a c))
+        (else (sum-of-squares b c))))
 
 ;;EXERCISE 1.4
+
+;; Observe that our model of evaluation allows for combinations whose operators
+;; are compound expressions. Use this observation to describe the behavior of
+;; the following procedure:
+
 (define (a-plus-abs-b a b)
   ((if (> b 0) + -) a b))
 
+;; Answer: based on the sign of b, the if statement returns either the + or -
+;; primitive, which is then what operates on a and b.
+
 ;;EXERCISE 1.5
+
+;; Ben Bitdiddle has invented a test to determine whether the interpreter he is
+;; faced with is using applicative-order evaluation or normal-order evaluation.
+;; He defines the following two procedures:
+
 (define (p) (p))
 
 (define (test x y)
@@ -162,8 +210,21 @@
       0
       y))
 
+;; Then he evaluates the expression
+
 ;: (test 0 (p))
 
+;; What behavior will Ben observe with an interpreter that uses
+;; applicative-order evaluation? What behavior will he observe with an
+;; interpreter that uses normal-order evaluation? Explain your answer. (Assume
+;; that the evaluation rule for the special form if is the same whether the in-
+;; terpreter is using normal or applicative order: the predicate expression is
+;; evaluated first, and the result determines whether to evaluate the consequent
+;; or the alternative expression.)
+
+;; Answer: Applicative-order never completes, because (test 0 (p)) will
+;; repeatedly evaluate into itself. Normal-order becomes 0, because after
+;; expanding, the if statement can choose 0.
 
 ;;;SECTION 1.1.7
 
@@ -193,20 +254,87 @@
 
 
 ;;EXERCISE 1.6
+
+;; Alyssa P. Hacker doesn’t see why if needs to be provided as a special form.
+;; “Why can’t I just define it as an ordinary procedure in terms of cond?” she
+;; asks. Alyssa’s friend Eva Lu Ator claims this can indeed be done, and she
+;; defines a new version of if:
+
 (define (new-if predicate then-clause else-clause)
   (cond (predicate then-clause)
         (else else-clause)))
 
+;; Eva demonstrates the program for Alyssa:
+
 ;: (new-if (= 2 3) 0 5)
+;; 5
 
 ;: (new-if (= 1 1) 0 5)
+;; 0
 
-(define (sqrt-iter guess x)
-  (new-if (good-enough? guess x)
-          guess
-          (sqrt-iter (improve guess x)
-                     x)))
+;; Delighted, Alyssa uses new-if to rewrite the square-root program:
 
+;; (define (sqrt-iter guess x)
+;;   (new-if (good-enough? guess x)
+;;           guess
+;;           (sqrt-iter (improve guess x)
+;;                      x)))
+
+;; What happens when Alyssa attempts to use this to compute square roots?
+;; Explain.
+
+;; Answer: Because new-if is a procedure, its operands have to be computed,
+;; which means that sqrt-iter is infinitely computed. With real if, only the
+;; path to take has to be actually computed and the function can quit.
+
+
+;;EXERCISE 1.7
+
+;; The good-enough? test used in computing square roots will not be very
+;; effective for finding the square roots of very small numbers. Also, in real
+;; computers, arithmetic operations are almost always performed with limited
+;; precision. This makes our test inadequate for very large numbers. Explain
+;; these statements, with examples showing how the test fails for small and
+;; large numbers. An alternative strategy for implementing good-enough? is to
+;; watch how guess changes from one iteration to the next and to stop when the
+;; change is a very small fraction of the guess. Design a square-root procedure
+;; that uses this kind of end test. Does this work better for small and large
+;; numbers?
+
+(define (good-enough? guess x)
+  (< (abs (- (improve guess x) guess)) (* guess 0.001)))
+
+
+;;EXERCISE 1.8
+
+;; Newton’s method for cube roots is based on the fact that if y is an
+;; approximation to the cube root of x , then a better approximation is given by
+;; the value (/ (+ (/ x (* y y)) (* 2 y)) 3).
+
+;; (Will: the textbook writes that formula out mathematically, not in lisp.)
+
+;; Use this formula to implement a cube-root procedure analogous to the
+;; square-root procedure. (In Section 1.3.4 we will see how to implement
+;; Newton’s method in general as an abstraction of these square-root and
+;; cube-root procedures.)
+
+(define (cube x) (* x x x))
+
+(define (cube-root-iter guess x)
+  (if (cube-good-enough? guess x)
+      guess
+      (cube-root-iter (cube-improve guess x)
+                 x)))
+
+(define (cube-improve guess x)
+  (/ (+ (/ x (* guess guess)) (* 2 guess)) 3))
+
+
+(define (cube-good-enough? guess x)
+  (< (abs (- (cube guess) x)) 0.001))
+
+(define (cube-root x)
+  (cube-root-iter 1.0 x))
 
 ;;;SECTION 1.1.8
 
